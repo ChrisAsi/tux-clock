@@ -504,6 +504,7 @@ void checkButtonState()
         if(btn_is_pressed && !btn_was_down)
         {
             btn_down_started = millis();
+            tone(buzzer, 2000); delay(200); noTone(buzzer);
         }
 
         //If button is not pressed now and was pressed before, register short press
@@ -523,6 +524,8 @@ void checkButtonState()
             
             //Ignore the button press until the user lets go
             btn_ignore = true;
+            tone(buzzer, 2000); delay(200); noTone(buzzer);
+            tone(buzzer, 2000); delay(200); noTone(buzzer);
         }
         else
         {
@@ -538,30 +541,6 @@ void checkButtonState()
     
     //Let this loops button state be known in the next loop
     btn_was_down = btn_is_pressed;
-}
-
-
-void buzzerExample()
-{
-  tone(buzzer, 1000); // Send 1KHz sound signal...
-  delay(1000);        // ...for 1 sec
-  noTone(buzzer);     // Stop sound...
-  delay(1000);        // ...for 1sec
-
-  tone(buzzer, 2000); // Send 1KHz sound signal...
-  delay(1000);        // ...for 1 sec
-  noTone(buzzer);     // Stop sound...
-  delay(1000);        // ...for 1sec
-  
-  tone(buzzer, 3000); // Send 1KHz sound signal...
-  delay(1000);        // ...for 1 sec
-  noTone(buzzer);     // Stop sound...
-  delay(1000);        // ...for 1sec
-
-  tone(buzzer, 500); // Send 1KHz sound signal...
-  delay(1000);        // ...for 1 sec
-  noTone(buzzer);     // Stop sound...
-  delay(1000);        // ...for 1sec
 }
 
 void tempExample()
