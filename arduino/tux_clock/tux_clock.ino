@@ -19,6 +19,8 @@ unsigned long btn_down_started = 0;
 
 //Temp and Humidity Sensor
 SimpleDHT11 dht11;
+byte temperature = 0;
+byte humidity = 0;
 
 //Neopixel Ring (12 LEDs)
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(12, 6, NEO_GRB + NEO_KHZ800);
@@ -66,9 +68,7 @@ void setup()
     setupRtc();
     Serial.println("RTC setup done.");
 
-    strip.begin();
-    strip.show();
-    strip.setBrightness(brightness);
+    setupNeo();
     Serial.print("LED brightness defaulted to: ");
     Serial.println(brightness);
     
@@ -90,6 +90,7 @@ void loop()
     {
         rtc_last_refreshed = millis();
         getDateTime();
+        getDhtData();
     }
     
     //Keep track of milliseconds between each multiples of 5 seconds
@@ -199,106 +200,32 @@ void loop()
     last_loop_millis = millis() - current_millis;
 }
 
-void setDateTime(int sec, int min, int hour, int dow, int day, int month, int year)
-{
-    ds3231.adjust(DateTime(year, month, day, hour, min, sec));
-    
-    getDateTime();
-    
-    edit_time_hour = 0;
-    edit_time_min = 0;
-    edit_weekday = 0;
-}
-
-void getDateTime()
-{
-    DateTime now = ds3231.now();
-    rtc[0] = now.second();
-    rtc[1] = now.minute();
-    rtc[2] = now.hour();
-    rtc[3] = now.dayOfTheWeek();
-    rtc[4] = now.day();
-    rtc[5] = now.month();
-    rtc[6] = now.year();
-}
-
-void editHour()
-{
-    if(edit_time_hour == 0)
-    {
-        edit_time_hour = rtc[2];
-        edit_time_hour = (edit_time_hour > 12 ? edit_time_hour-12 : edit_time_hour);
-    }
-    
-    if(btn_down_short)
-    {
-        edit_time_hour = (edit_time_hour > 11 ? edit_time_hour = 1 : edit_time_hour + 1);
-    }
-    
-    clearNeo();
-    strip.setPixelColor(edit_time_hour-1 , 255, 0, 0);
-    strip.show();
-    delay(40);
-}
-
-void editMinute()
-{
-    if(edit_time_min == 0)
-    {
-        edit_time_min = rtc[1];
-    }
-    
-    if(btn_down_short)
-    {
-        edit_time_min = (edit_time_min >= 59 ? edit_time_min = 1 : edit_time_min + 1);
-    }
-    
-    int minute_ratio = map(((edit_time_min % 5)*10), 0, 50, 0, 255);
-    int minute = (edit_time_min/5);
-
-    clearNeo();
-    strip.setPixelColor(minute-1, 0, 0, 255-minute_ratio);
-    strip.setPixelColor(minute , 0, 0, minute_ratio);
-    strip.show();
-    delay(40);
-}
-
-void editDow()
-{
-    if(edit_weekday == 0)
-    {
-        edit_weekday = rtc[3];
-    }
-    
-    if(btn_down_short)
-    {
-        edit_weekday = (edit_weekday >= 7 ? edit_weekday = 1 : edit_weekday + 1);
-    }
-    
-    if(millis() - edit_date_blink_millis > 1000)
-    {
-        edit_date_blink_millis = millis();
-    }
-    
-    int intensitya = (millis() - edit_date_blink_millis < 500 ? 255 : 100);
-    
-    clearNeo();
-    strip.setPixelColor(0, 20, 20, 20);
-    strip.setPixelColor(1, 20, 20, 20);
-    strip.setPixelColor(2, 20, 20, 20);
-    strip.setPixelColor(3, 20, 20, 20);
-    strip.setPixelColor(4, 20, 20, 20);
-    strip.setPixelColor(5, 20, 20, 20);
-    strip.setPixelColor(6, 20, 20, 20);
-    strip.setPixelColor(edit_weekday-1, intensitya, intensitya, intensitya);
-    strip.show();
-    delay(40);
-}
-
 void setupPins()
 {
     pinMode(BUZZER_PIN, OUTPUT);
     pinMode(BTN_PIN, INPUT);
+}
+
+void setupRtc()
+{
+    if(!ds3231.begin())
+    {
+        Serial.println("Couldn't find RTC");
+        while (1);
+    }
+    
+    if(ds3231.lostPower())
+    {
+        Serial.println("RTC lost power, lets set the time!");
+        ds3231.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    }
+}
+
+void setupNeo()
+{
+    strip.begin();
+    strip.show();
+    strip.setBrightness(brightness);
 }
 
 void ledTest()
@@ -328,19 +255,27 @@ void ledTest()
     }
 }
 
-void setupRtc()
+void getDateTime()
 {
-    if(!ds3231.begin())
-    {
-        Serial.println("Couldn't find RTC");
-        while (1);
-    }
+    DateTime now = ds3231.now();
+    rtc[0] = now.second();
+    rtc[1] = now.minute();
+    rtc[2] = now.hour();
+    rtc[3] = now.dayOfTheWeek();
+    rtc[4] = now.day();
+    rtc[5] = now.month();
+    rtc[6] = now.year();
+}
+
+void setDateTime(int sec, int min, int hour, int dow, int day, int month, int year)
+{
+    ds3231.adjust(DateTime(year, month, day, hour, min, sec));
     
-    if(ds3231.lostPower())
-    {
-        Serial.println("RTC lost power, lets set the time!");
-        ds3231.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    }
+    getDateTime();
+    
+    edit_time_hour = 0;
+    edit_time_min = 0;
+    edit_weekday = 0;
 }
 
 void showTime(int show_hour, int show_minute, int show_second)
@@ -394,6 +329,47 @@ void showTime(int show_hour, int show_minute, int show_second)
     delay(40);
 }
 
+void editHour()
+{
+    if(edit_time_hour == 0)
+    {
+        edit_time_hour = rtc[2];
+        edit_time_hour = (edit_time_hour > 12 ? edit_time_hour-12 : edit_time_hour);
+    }
+    
+    if(btn_down_short)
+    {
+        edit_time_hour = (edit_time_hour > 11 ? edit_time_hour = 1 : edit_time_hour + 1);
+    }
+    
+    clearNeo();
+    strip.setPixelColor(edit_time_hour-1 , 255, 0, 0);
+    strip.show();
+    delay(40);
+}
+
+void editMinute()
+{
+    if(edit_time_min == 0)
+    {
+        edit_time_min = rtc[1];
+    }
+    
+    if(btn_down_short)
+    {
+        edit_time_min = (edit_time_min >= 59 ? edit_time_min = 1 : edit_time_min + 1);
+    }
+    
+    int minute_ratio = map(((edit_time_min % 5)*10), 0, 50, 0, 255);
+    int minute = (edit_time_min/5);
+
+    clearNeo();
+    strip.setPixelColor(minute-1, 0, 0, 255-minute_ratio);
+    strip.setPixelColor(minute , 0, 0, minute_ratio);
+    strip.show();
+    delay(40);
+}
+
 void showDow(int show_dow)
 {
     clearNeo();
@@ -405,6 +381,38 @@ void showDow(int show_dow)
     strip.setPixelColor(5, 20, 20, 20);
     strip.setPixelColor(6, 20, 20, 20);
     strip.setPixelColor(show_dow, 255, 255, 255);
+    strip.show();
+    delay(40);
+}
+
+void editDow()
+{
+    if(edit_weekday == 0)
+    {
+        edit_weekday = rtc[3];
+    }
+    
+    if(btn_down_short)
+    {
+        edit_weekday = (edit_weekday >= 7 ? edit_weekday = 1 : edit_weekday + 1);
+    }
+    
+    if(millis() - edit_date_blink_millis > 1000)
+    {
+        edit_date_blink_millis = millis();
+    }
+    
+    int intensitya = (millis() - edit_date_blink_millis < 500 ? 255 : 100);
+    
+    clearNeo();
+    strip.setPixelColor(0, 20, 20, 20);
+    strip.setPixelColor(1, 20, 20, 20);
+    strip.setPixelColor(2, 20, 20, 20);
+    strip.setPixelColor(3, 20, 20, 20);
+    strip.setPixelColor(4, 20, 20, 20);
+    strip.setPixelColor(5, 20, 20, 20);
+    strip.setPixelColor(6, 20, 20, 20);
+    strip.setPixelColor(edit_weekday-1, intensitya, intensitya, intensitya);
     strip.show();
     delay(40);
 }
@@ -457,13 +465,44 @@ void editBrightness()
     delay(50);
 }
 
-int nthClockDigit(int x, int n)
+void showTemperature()
 {
-    if(x <= 0 || x >= 100){ return 0; }
-    if(n == 2) {
+    Serial.print((int)temperature); Serial.print(" *C, "); 
+    
+    clearNeo();
+    strip.setPixelColor(0, 20, 20, 20);
+    strip.setPixelColor(1, 20, 20, 20);
+    strip.setPixelColor(2, 20, 20, 20);
+    strip.setPixelColor(3, 20, 20, 20);
+    strip.setPixelColor(4, 20, 20, 20);
+    strip.setPixelColor(5, 20, 20, 20);
+    strip.setPixelColor(6, 20, 20, 20);
+    strip.setPixelColor(show_dow, 255, 255, 255);
+    strip.show();
+    delay(40);
+}
+
+void showHumidity
+{
+    Serial.print((int)humidity); Serial.println(" %");
+}
+
+int nthDigit(int x, int n)
+{
+    if(x <= 0 || x >= 100)
+    {
+        return 0;
+    }
+    if(x > 0 && x < 10)
+    {
+        return x;
+    }
+    if(n == 2)
+    {
         return x-floor(x/10)*10;
     }
-    if(n == 1){
+    if(n == 1)
+    {
         return floor(x/10);
     }
 }
@@ -543,24 +582,7 @@ void checkButtonState()
     btn_was_down = btn_is_pressed;
 }
 
-void tempExample()
+void getDhtData()
 {
-   // start working...
-  Serial.println("=================================");
-  Serial.println("Sample DHT11...");
-  
-  // read without samples.
-  byte temperature = 0;
-  byte humidity = 0;
-  if (dht11.read(pinDHT11, &temperature, &humidity, NULL)) {
-    Serial.print("Read DHT11 failed.");
-    return;
-  }
-  
-  Serial.print("Sample OK: ");
-  Serial.print((int)temperature); Serial.print(" *C, "); 
-  Serial.print((int)humidity); Serial.println(" %");
-  
-  // DHT11 sampling rate is 1HZ.
-  delay(1000);
+    dht11.read(DHT_PIN, &temperature, &humidity, NULL);
 }
