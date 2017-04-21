@@ -467,24 +467,48 @@ void editBrightness()
 
 void showTemperature()
 {
-    Serial.print((int)temperature); Serial.print(" *C, "); 
-    
     clearNeo();
-    strip.setPixelColor(0, 20, 20, 20);
-    strip.setPixelColor(1, 20, 20, 20);
-    strip.setPixelColor(2, 20, 20, 20);
-    strip.setPixelColor(3, 20, 20, 20);
-    strip.setPixelColor(4, 20, 20, 20);
-    strip.setPixelColor(5, 20, 20, 20);
-    strip.setPixelColor(6, 20, 20, 20);
-    strip.setPixelColor(show_dow, 255, 255, 255);
+    for(int x=0; x < 12; x++)
+    {
+        strip.setPixelColor(x, 20, 20, 0);
+    }
+    
+    int temp = (int)temperature;
+    
+    if(temp > 0 && temp <= 12)
+    {
+        strip.setPixelColor(temp, 255, 0, 0);
+    }
+    else if(temp > 12 && temp <= 99)
+    {
+        strip.setPixelColor(nthDigit(temp, 1), 255, 0, 0);
+        strip.setPixelColor(nthDigit(temp, 2), 0, 0, 255);
+    }
     strip.show();
     delay(40);
 }
 
 void showHumidity
 {
-    Serial.print((int)humidity); Serial.println(" %");
+    clearNeo();
+    for(int x=0; x < 12; x++)
+    {
+        strip.setPixelColor(x, 0, 0, 20);
+    }
+    
+    int hum = (int)humidity;
+    
+    if(hum > 0 && hum <= 12)
+    {
+        strip.setPixelColor(hum, 255, 0, 0);
+    }
+    else if(hum > 12 && hum <= 99)
+    {
+        strip.setPixelColor(nthDigit(hum, 1), 255, 0, 0);
+        strip.setPixelColor(nthDigit(hum, 2), 0, 0, 255);
+    }
+    strip.show();
+    delay(40);
 }
 
 int nthDigit(int x, int n)
