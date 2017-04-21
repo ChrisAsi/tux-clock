@@ -144,7 +144,7 @@ void loop()
     {
         if(btn_down_short)
         {
-            state = "show_brightness";
+            state = "show_temperature";
         }
         else if(btn_down_long)
         {
@@ -153,6 +153,36 @@ void loop()
         else
         {
             showDow(rtc[3]);
+        }
+    }
+    else if(state == "show_temperature")
+    {
+        if(btn_down_short)
+        {
+            state = "show_humidity";
+        }
+        else if(btn_down_long)
+        {
+            
+        }
+        else
+        {
+            showTemperature();
+        }
+    }
+    else if(state == "show_humidity")
+    {
+        if(btn_down_short)
+        {
+            state = "show_brightness";
+        }
+        else if(btn_down_long)
+        {
+            
+        }
+        else
+        {
+            showHumidity();
         }
     }
     else if(state == "edit_brightness")
@@ -488,7 +518,7 @@ void showTemperature()
     delay(40);
 }
 
-void showHumidity
+void showHumidity()
 {
     clearNeo();
     for(int x=0; x < 12; x++)
@@ -567,7 +597,7 @@ void checkButtonState()
         if(btn_is_pressed && !btn_was_down)
         {
             btn_down_started = millis();
-            tone(buzzer, 2000); delay(200); noTone(buzzer);
+            tone(BUZZER_PIN, 2000); delay(200); noTone(BUZZER_PIN);
         }
 
         //If button is not pressed now and was pressed before, register short press
@@ -587,8 +617,8 @@ void checkButtonState()
             
             //Ignore the button press until the user lets go
             btn_ignore = true;
-            tone(buzzer, 2000); delay(200); noTone(buzzer);
-            tone(buzzer, 2000); delay(200); noTone(buzzer);
+            tone(BUZZER_PIN, 2000); delay(200); noTone(BUZZER_PIN);
+            tone(BUZZER_PIN, 2000); delay(200); noTone(BUZZER_PIN);
         }
         else
         {
