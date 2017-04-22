@@ -121,6 +121,7 @@ void loop()
         {
             //User just finished editing the time, set the entered time in RTC
             setDateTime(0, edit_time_min, edit_time_hour, rtc[3], rtc[4], rtc[5], rtc[6]);
+            printRtcToSerial();
             state = "show_time";
         }
         else
@@ -132,6 +133,7 @@ void loop()
     {
         if(btn_down_long)
         {
+            Serial.println(edit_weekday);
             setDateTime(0, rtc[1], rtc[2], edit_weekday, rtc[4], rtc[5], rtc[6]);
             state = "show_dow";
         }
@@ -249,6 +251,20 @@ void setupRtc()
         Serial.println("RTC lost power, lets set the time!");
         ds3231.adjust(DateTime(F(__DATE__), F(__TIME__)));
     }
+
+    getDateTime();
+    printRtcToSerial();
+}
+
+void printRtcToSerial()
+{
+    Serial.print("RTC set to: ");
+    Serial.print(rtc[5]); Serial.print("/");
+    Serial.print(rtc[4]); Serial.print("/");
+    Serial.print(rtc[6]); Serial.print(" ");
+    Serial.print(rtc[2]); Serial.print(":");
+    Serial.print(rtc[1]); Serial.print(":");
+    Serial.println(rtc[0]);
 }
 
 void setupNeo()
@@ -364,16 +380,23 @@ void editHour()
     if(edit_time_hour == 0)
     {
         edit_time_hour = rtc[2];
-        edit_time_hour = (edit_time_hour > 12 ? edit_time_hour-12 : edit_time_hour);
+        edit_time_hour = (edit_time_hour > 24 ? edit_time_hour-24 : edit_time_hour);
     }
     
     if(btn_down_short)
     {
-        edit_time_hour = (edit_time_hour > 11 ? edit_time_hour = 1 : edit_time_hour + 1);
+        edit_time_hour = (edit_time_hour > 23 ? edit_time_hour = 1 : edit_time_hour + 1);
     }
     
     clearNeo();
-    strip.setPixelColor(edit_time_hour-1 , 255, 0, 0);
+    if(edit_time_hour > 12)
+    {
+        strip.setPixelColor(edit_time_hour-13 , 120, 0, 120);
+    }
+    else
+    {
+        strip.setPixelColor(edit_time_hour-1 , 255, 0, 0);
+    }
     strip.show();
     delay(40);
 }
@@ -581,8 +604,6 @@ void checkButtonState()
 {
     //Is the button being press right now
     bool btn_is_pressed = digitalRead(BTN_PIN) == LOW ? false : true;
-
-    Serial.println(btn_is_pressed);
 
     //If the button long press was registered in the last loop, stop it in this loop
     if(btn_down_long)
