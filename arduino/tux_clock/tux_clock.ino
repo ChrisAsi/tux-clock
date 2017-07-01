@@ -31,17 +31,11 @@ RTC_DS3231 ds3231;
 //Keep track of milliseconds between seconds
 int last_sec_five = 0;
 unsigned long last_sec_five_millis = 0;
-int last_loop_millis = 0;
-
-//Keep track of show date
-int show_date_speed = 4000; //in milliseconds
-unsigned long show_date_last_millis = 0;
 
 //Needed to keep track of datetime editing
 unsigned long edit_date_blink_millis = 0;
 int edit_time_hour = 0;
 int edit_time_min = 0;
-int edit_weekday = 0;
 
 //RTC time
 int rtc[7]; //sec,min,hour,dow,day,month,year
@@ -51,7 +45,7 @@ unsigned long rtc_last_refreshed = 0;
 String state = "";
 
 //The default brightness level of the LEDs
-int brightness = 255; //1 - 255
+int brightness = 20; //1 - 255
 int edit_brightness_state = 1;
 
 void setup()
@@ -81,6 +75,13 @@ void setup()
 
 void loop()
 {
+    Serial.print(rtc[2]); Serial.print(":");
+    Serial.print(rtc[1]); Serial.print(":");
+    Serial.print(rtc[0]); Serial.print(" -- ");
+    Serial.print((int)(((int)temperature * 9)/5) + 32); Serial.print(" -- ");
+    Serial.print(humidity); Serial.print(" -- ");
+    Serial.println(brightness);
+  
     unsigned long current_millis = millis();
     
     checkButtonState();
@@ -127,34 +128,6 @@ void loop()
         else
         {
             editMinute();
-        }
-    }
-    else if(state == "edit_dow")
-    {
-        if(btn_down_long)
-        {
-            Serial.println(edit_weekday);
-            setDateTime(0, rtc[1], rtc[2], edit_weekday, rtc[4], rtc[5], rtc[6]);
-            state = "show_dow";
-        }
-        else
-        {
-            editDow();
-        }
-    }
-    else if(state == "show_dow")
-    {
-        if(btn_down_short)
-        {
-            state = "show_temperature";
-        }
-        else if(btn_down_long)
-        {
-            state = "edit_dow";
-        }
-        else
-        {
-            showDow(rtc[3]);
         }
     }
     else if(state == "show_temperature")
@@ -217,7 +190,7 @@ void loop()
     {
         if(btn_down_short)
         {
-            state = "show_dow";
+            state = "show_temperature";
         }
         else if(btn_down_long)
         {
@@ -228,8 +201,6 @@ void loop()
             showTime(rtc[2], rtc[1], rtc[0]);
         }
     }
-    
-    last_loop_millis = millis() - current_millis;
 }
 
 void setupPins()
@@ -276,6 +247,11 @@ void setupNeo()
 
 void ledTest()
 {
+    clearNeo();
+    strip.setPixelColor(0, 255, 255, 255);
+    strip.show();
+    delay(1000);
+  
     for(int p=0; p <= 11; p++)
     {
         clearNeo();
@@ -321,7 +297,6 @@ void setDateTime(int sec, int min, int hour, int dow, int day, int month, int ye
     
     edit_time_hour = 0;
     edit_time_min = 0;
-    edit_weekday = 0;
 }
 
 void showTime(int show_hour, int show_minute, int show_second)
@@ -332,7 +307,7 @@ void showTime(int show_hour, int show_minute, int show_second)
     int second = (show_second/5)+1;
     
     int minute_ratio = map(((show_minute % 5)*10), 0, 50, 0, 255);
-    int minute = (show_minute/5);
+    int minute = (show_minute/5)+1;
     
     int hour_ratio = map(show_minute, 0, 60, 0, 255);
     int hour = (show_hour > 12 ? show_hour-12 : show_hour);
@@ -423,53 +398,6 @@ void editMinute()
     delay(40);
 }
 
-void showDow(int show_dow)
-{
-    clearNeo();
-    strip.setPixelColor(0, 20, 20, 20);
-    strip.setPixelColor(1, 20, 20, 20);
-    strip.setPixelColor(2, 20, 20, 20);
-    strip.setPixelColor(3, 20, 20, 20);
-    strip.setPixelColor(4, 20, 20, 20);
-    strip.setPixelColor(5, 20, 20, 20);
-    strip.setPixelColor(6, 20, 20, 20);
-    strip.setPixelColor(show_dow, 255, 255, 255);
-    strip.show();
-    delay(40);
-}
-
-void editDow()
-{
-    if(edit_weekday == 0)
-    {
-        edit_weekday = rtc[3];
-    }
-    
-    if(btn_down_short)
-    {
-        edit_weekday = (edit_weekday >= 7 ? edit_weekday = 1 : edit_weekday + 1);
-    }
-    
-    if(millis() - edit_date_blink_millis > 1000)
-    {
-        edit_date_blink_millis = millis();
-    }
-    
-    int intensitya = (millis() - edit_date_blink_millis < 500 ? 255 : 100);
-    
-    clearNeo();
-    strip.setPixelColor(0, 20, 20, 20);
-    strip.setPixelColor(1, 20, 20, 20);
-    strip.setPixelColor(2, 20, 20, 20);
-    strip.setPixelColor(3, 20, 20, 20);
-    strip.setPixelColor(4, 20, 20, 20);
-    strip.setPixelColor(5, 20, 20, 20);
-    strip.setPixelColor(6, 20, 20, 20);
-    strip.setPixelColor(edit_weekday-1, intensitya, intensitya, intensitya);
-    strip.show();
-    delay(40);
-}
-
 void showBrightness()
 {
     clearNeo();
@@ -523,10 +451,10 @@ void showTemperature()
     clearNeo();
     for(int x=0; x < 12; x++)
     {
-        strip.setPixelColor(x, 20, 20, 0);
+        strip.setPixelColor(x, 15, 15, 0);
     }
     
-    int temp = (int)temperature;
+    int temp = (int)(((int)temperature * 9)/5) + 32;
     
     if(temp > 0 && temp <= 12)
     {
@@ -534,8 +462,17 @@ void showTemperature()
     }
     else if(temp > 12 && temp <= 99)
     {
-        strip.setPixelColor(nthDigit(temp, 1), 255, 0, 0);
-        strip.setPixelColor(nthDigit(temp, 2), 0, 0, 255);
+        int first_int = nthDigit(temp, 1)-1;
+        int second_int = nthDigit(temp, 2)-1;
+        if(first_int == second_int)
+        {
+            strip.setPixelColor(nthDigit(temp, 1)-1, 255, 0, 255);
+        }
+        else
+        {
+            strip.setPixelColor(nthDigit(temp, 1)-1, 255, 0, 0);
+            strip.setPixelColor(nthDigit(temp, 2)-1, 0, 0, 255);
+        }
     }
     strip.show();
     delay(40);
@@ -546,7 +483,7 @@ void showHumidity()
     clearNeo();
     for(int x=0; x < 12; x++)
     {
-        strip.setPixelColor(x, 0, 0, 20);
+        strip.setPixelColor(x, 0, 0, 15);
     }
     
     int hum = (int)humidity;
@@ -557,8 +494,17 @@ void showHumidity()
     }
     else if(hum > 12 && hum <= 99)
     {
-        strip.setPixelColor(nthDigit(hum, 1), 255, 0, 0);
-        strip.setPixelColor(nthDigit(hum, 2), 0, 0, 255);
+        int first_int = nthDigit(hum, 1)-1;
+        int second_int = nthDigit(hum, 2)-1;
+        if(first_int == second_int)
+        {
+            strip.setPixelColor(first_int, 255, 0, 255);
+        }
+        else
+        {
+            strip.setPixelColor(first_int, 255, 0, 0);
+            strip.setPixelColor(second_int, 0, 0, 255);
+        }
     }
     strip.show();
     delay(40);
